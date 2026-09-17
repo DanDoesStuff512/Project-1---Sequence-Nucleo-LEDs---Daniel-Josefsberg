@@ -16,12 +16,18 @@
 
 volatile uint32_t last_time = 0;
 volatile uint8_t state = 0;
+volatile uint32_t ms = 0;
+
+void SysTick_Handler(void) {
+    ms++;
+}
 
 void EXTI15_10_IRQHandler(void) {
     if (EXTI->PR & (1 << BTN_PIN)) {
-        uint32_t now = SysTick->VAL;
-        if ((now - last_time) > 50000) {
+        if (ms - last_time > 50) {
+            last_time = ms;
             state = (state + 1) % 3;
+
             if (state == 0) {
                 LED_PORT->BSRR = (1 << LED_R_PIN) | (1 << (LED_G_PIN + 16)) | (1 << (LED_B_PIN + 16));
             } else if (state == 1) {
@@ -29,8 +35,8 @@ void EXTI15_10_IRQHandler(void) {
             } else {
                 LED_PORT->BSRR = (1 << LED_B_PIN) | (1 << (LED_R_PIN + 16)) | (1 << (LED_G_PIN + 16));
             }
-            last_time = now;
         }
+
         EXTI->PR |= (1 << BTN_PIN);
     }
 }
@@ -51,7 +57,7 @@ int main(void) {
     SYSCFG->EXTICR[3] &= ~SYSCFG_EXTICR4_EXTI13;
     SYSCFG->EXTICR[3] |=  SYSCFG_EXTICR4_EXTI13_PC;
     EXTI->IMR  |= (1 << BTN_PIN);
-    EXTI->RTSR |= (1 << BTN_PIN);
+    EXTI->FTSR |= (1 << BTN_PIN);
 
     NVIC_EnableIRQ(EXTI15_10_IRQn);
 
